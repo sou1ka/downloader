@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+<title>Monobox Downloader</title>
+<link href="./css/bootstrap.min.css" rel="stylesheet" />
+<link href="./css/shards.min.css" rel="stylesheet" />
+<script src="./js/jquery-3.4.1.min.js"></script>
+<script src="./js/jquery.sse.min.js"></script>
+<script src="./js/popper.min.js"></script>
+<script src="./js/bootstrap.min.js"></script>
+<script src="./js/shards.min.js"></script>
+
+<style>
+
+body {
+	background: #fafafa;
+	display: flex;
+	flex-direction: column;
+	min-height: 100vh;
+}
+
+footer {
+	margin-top: auto;
+}
+
+.container {
+	width: auto;
+	max-width: 680px;
+	padding: 0 15px;
+}
+
+.footer {
+	background-color: #f5f5f5;
+}
+</style>
+
+<script type="text/javascript">
+$(function() {
+	$('#start').click(function() {
+		var url = $('#url').val();
+
+		if(!url) { return; }
+
+		$.ajax({
+			type: 'POST',
+			url: './downloader.php',
+			data: { url: url }
+		}).done(function(msg) {
+			if(!msg.success) {
+				// エラーメッセージ
+				$('#res').append('<div class="alert alert-danger alert-dismissible fade show" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button> <i class="fa fa-exclamation-circle"></i> <strong>On no!</strong> ' + msg.url + ' のDLに失敗したみたい…</div>');
+			} else {
+				// プログレスバー追加
+				$('#progresses').append('<div class="progress-wrapper">' +
+					'<span class="progress-label font-weight-bold">' + url + '</span>' +
+					'<div class="progress progress-lg">' +
+					'<div id="' + msg.id + '" class="progress-bar progress-bar-striped bg-success progress-bar-animated" role="progressbar" aria-valuemin="0" aria-valuemax="100" style="width: 0%;"></div>' +
+					'</div>' +
+					'</div>'
+				);
+
+				// 状況チェック
+				var sse = $.SSE('./checker.php?filename=' + url.substr(url.lastIndexOf("/") + 1), {
+					onMessage: function(r) {
+						if(r.data == '100%') {
+							sse.stop();
+						} else if(r.data == null) {
+							sse.stop();
+						} else if(r.data == 'Omitting download') {
+							sse.stop();
+						} else if(r.data == 'saved') {
+							$('#' + msg.id).width('100%');
+							sse.stop();
+						} else {
+							$('#' + msg.id).width(r.data);
+						}
+					}
+				});
+				sse.start();
+			}
+		});
+	});
+
+});
+
+</script>
+
+</head>
+
+<body class="d-flex flex-column h-100">
+
+<main role="main" class="flex-shrink-0">
+<div class="container">
+<h1 class="mt-5">Monobox Downloader</h1>
+<p class="font-weight-bold">URLをダウンロードします</p>
+
+<p id="res"></p>
+
+<p>
+<input type="text" class="form-control" name="url" id="url" placeholder="URL" /><br />
+<button type="button" class="btn btn-primary" id="start">Start</button>
+</p>
+
+<div id="progresses"></div>
+
+</div>
+</main>
+
+
+<footer class="footer mt-auto py-3">
+<div class="container">
+<span class="text-muted">Monobox Downloader.</span>
+</div>
+</footer>
+
+</body>
+</html>
