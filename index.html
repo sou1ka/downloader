@@ -12,6 +12,7 @@
 <script src="./js/popper.min.js"></script>
 <script src="./js/bootstrap.min.js"></script>
 <script src="./js/shards.min.js"></script>
+<script src="./js/dateformat.js"></script>
 
 <style>
 
@@ -39,6 +40,7 @@ footer {
 
 <script type="text/javascript">
 $(function() {
+	// download
 	$('#start').click(function() {
 		var url = $('#url').val();
 
@@ -73,6 +75,7 @@ $(function() {
 							sse.stop();
 						} else if(r.data == 'saved') {
 							$('#' + msg.id).width('100%');
+							$('#' + msg.id).removeClass('progress-bar-animated');
 							sse.stop();
 						} else {
 							$('#' + msg.id).width(r.data);
@@ -84,7 +87,112 @@ $(function() {
 		});
 	});
 
+	$('#paste').click(function() {
+		navigator.clipboard.readText().then(function(text) {
+			$('#url').value(text);
+		});
+	//	$('#url').focus();
+	//	document.execCommand('paste');
+	});
+
+	loadlist();
+	loadlog();
+
+	$('#list .reload').click(loadlist);
+	$('#log .reload').click(loadlog);
+
+	$($('.nav-item')[0]).children('a').addClass('active');
 });
+
+// list
+var loadlist = function() {
+	$.ajax({
+			type: 'POST',
+			url: './filelist.php',
+		}).done(function(ls) {
+			var list = $('#list');
+			$('#list table').remove();
+			$(list).append('<table class="table table-responsive table-sm table-bordered table-striped table-hover">' +
+				'<thead class="">' +
+				'<tr>' +
+				'	<th scope="col">Name</th>' +
+				'	<th scope="col">Size</th>' +
+				'	<th scope="col">Modified</th>' +
+				'</tr>' +
+				'</thead>' +
+				'<tbody>' +
+				'</table>');
+			var table = $('#list table');
+
+			for(var l of ls) {
+				table.append('<tr><td><small>' + l.filename + '</small></td><td class="text-right"><small>' + l.filesize + '</small></td><td class="text-right"><small>' + new DateFormat('yyyy/MM/dd  HH:mm').format(new Date(l.lastmodify)) + '</small></td></tr><tr><td colspan="3"><div class="move form-inline"><input type="hidden" value="' + l.filename + '" /><input type="text" class="form-control w-75" value="/home/samba/sou1bb10/encode/アニメ/" />&nbsp;<button type="button" class="btn btn-info movebtn">Move</button></div></td></tr>');
+			}
+
+			$('.movebtn').click(function() {
+				var input = $(this).parent().children('input');
+				$.ajax({
+					type: 'POST',
+					url: './filemove.php',
+					data: {
+						source: $(input[0]).val(),
+						distination: $(input[1]).val(),
+					},
+				}).done(function(msg) {
+					if(!msg.success) {
+						// エラーメッセージ
+						$('#res').append('<div class="alert alert-danger alert-dismissible fade show" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button> <i class="fa fa-exclamation-circle"></i> <strong>On no!</strong> 移動に失敗したみたい…</div>');
+					} else {
+						loadlist();
+					}
+				});
+			});
+	});
+};
+
+// log
+var loadlog = function() {
+	$.ajax({
+			type: 'POST',
+			url: './loglist.php',
+		}).done(function(ls) {
+			var list = $('#log');
+			$('#log table').remove();
+			$(list).append('<table class="table table-responsive table-sm table-bordered table-striped table-hover">' +
+				'<thead class="">' +
+				'<tr>' +
+				'	<th scope="col">Name</th>' +
+				'	<th scope="col">Size</th>' +
+				'	<th scope="col">Modified</th>' +
+				'	<th scope="col">Delete</th>' +
+				'</tr>' +
+				'</thead>' +
+				'<tbody>' +
+				'</table>');
+			var table = $('#log table');
+
+			for(var l of ls) {
+				table.append('<tr><td><small>' + l.filename + '</small></td><td class="text-right"><small>' + l.filesize + '</small></td><td class="text-right"><small>' + new DateFormat('yyyy/MM/dd  HH:mm').format(new Date(l.lastmodify)) + '</small></td><td><div class="move"><input type="hidden" value="' + l.filename + '" /><button type="button" class="btn btn-info delbtn">Delete</button></div></td></tr>');
+			}
+
+			$('.delbtn').click(function() {
+				var input = $(this).parent().children('input');
+				$.ajax({
+					type: 'POST',
+					url: './filedelete.php',
+					data: {
+						source: $(input[0]).val(),
+					},
+				}).done(function(msg) {
+					if(!msg.success) {
+						// エラーメッセージ
+						$('#res').append('<div class="alert alert-danger alert-dismissible fade show" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">×</span></button> <i class="fa fa-exclamation-circle"></i> <strong>On no!</strong> 削除に失敗したみたい…</div>');
+					} else {
+						loadlog();
+					}
+				});
+			});
+	});
+};
 
 </script>
 
@@ -99,12 +207,59 @@ $(function() {
 
 <p id="res"></p>
 
+<ul class="nav nav-pills nav-fill">
+	<li class="nav-item"><a href="#download" class="nav-link" data-toggle="tab" class="nav-link active">DOWNLOAD</a></li>
+	<li class="nav-item"><a href="#list" class="nav-link" data-toggle="tab" class="nav-link">LIST</a></li>
+	<li class="nav-item"><a href="#log" class="nav-link" data-toggle="tab" class="nav-link">LOG</a></li>
+</ul>
+
+<br />
+
+<div class="tab-content">
+
+<div id="download" class="tab-pane active">
+
 <p>
-<input type="text" class="form-control" name="url" id="url" placeholder="URL" /><br />
-<button type="button" class="btn btn-primary" id="start">Start</button>
+<input type="text" class="form-control" name="url" id="url" placeholder="URL" onclick="this.select();" />
+<button type="button" class="btn btn-pill btn-primary" id="paste">Paste</button><br />
+<button type="button" class="btn btn-pill btn-secondary" id="start">Start</button>
 </p>
 
 <div id="progresses"></div>
+
+</div>
+
+<div id="list" class="tab-pane">
+<!--<table class="table table-responsive table-sm table-bordered table-striped table-hover">
+<thead class="">
+<tr>
+	<th scope="col">Name</th>
+	<th scope="col">Size</th>
+	<th scope="col">Modified</th>
+	<th scope="col">Move</th>
+</tr>
+</thead>
+<tbody>
+</table>-->
+<p><button type="button" class="btn btn-secondary btn-pill reload">Reload</button></p>
+</div>
+
+<div id="log" class="tab-pane">
+<!--<table class="table table-responsive table-sm table-bordered table-striped table-hover">
+<thead class="">
+<tr>
+	<th scope="col">Name</th>
+	<th scope="col">Size</th>
+	<th scope="col">Modified</th>
+	<th scope="col">Delete</th>
+</tr>
+</thead>
+<tbody>
+</table>-->
+<p><button type="button" class="btn btn-secondary btn-pill reload">Reload</button></p>
+</div>
+
+</div>
 
 </div>
 </main>

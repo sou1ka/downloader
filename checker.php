@@ -5,7 +5,7 @@ header('Cache-Control: no-store');
 $filename = filter_input(INPUT_GET, 'filename');
 
 $lines = file('/tmp/' . $filename . '.log', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-$log = $lines[count($lines) - 2];
+$log = $lines[count($lines) - 2].$lines[count($lines) - 1];
 
 preg_match('/([0-9]+%)|(saved)|(Omitting download)/', $log, $m);
 
@@ -13,6 +13,7 @@ preg_match('/([0-9]+%)|(saved)|(Omitting download)/', $log, $m);
 //  'data' => $m[0],
 //), JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE);
 
+echo  "retry: 250\n";
 echo "data: " . $m[0];
 echo "\n\n";
 
