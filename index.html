@@ -88,11 +88,11 @@ $(function() {
 	});
 
 	$('#paste').click(function() {
-		navigator.clipboard.readText().then(function(text) {
-			$('#url').value(text);
-		});
-	//	$('#url').focus();
-	//	document.execCommand('paste');
+//		navigator.clipboard.readText().then(function(text) {
+//			$('#url').value(text);
+//		});
+		$('#url').focus();
+		document.execCommand("paste");
 	});
 
 	loadlist();
